@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured, ScrapeJob, ScrapeResponse } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { demoScrapeResult } from '@/lib/demoData';
 
 const SCRAPE_API_URL = 'https://womcxbappudoglbtmnzu.supabase.co/functions/v1/scrape';
 
@@ -158,6 +159,16 @@ export function useScraper() {
     }
   };
 
+  // Load demo data for testing
+  const loadDemo = useCallback(() => {
+    setCurrentResult(demoScrapeResult);
+    setSelectedJobId('demo-job-001');
+    toast({
+      title: 'Demo loaded',
+      description: 'Showing sample scrape results for UI testing.',
+    });
+  }, [toast]);
+
   return {
     isLoading,
     history,
@@ -166,5 +177,6 @@ export function useScraper() {
     scrape,
     loadResult,
     deleteJob,
+    loadDemo,
   };
 }
