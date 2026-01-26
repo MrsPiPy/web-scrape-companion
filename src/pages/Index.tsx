@@ -4,7 +4,7 @@ import { ResultsTabs } from '@/components/ResultsTabs';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { useScraper } from '@/hooks/useScraper';
-import { Globe, Share2, Link, FileSpreadsheet } from 'lucide-react';
+import { Globe, Share2, Link, FileSpreadsheet, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -112,6 +112,42 @@ const Index = () => {
     });
   };
 
+  const handleExportImages = () => {
+    if (!currentResult?.images?.length) {
+      toast({
+        title: 'No images to export',
+        description: 'Scrape a URL with images first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Build CSV with image data
+    const rows: string[][] = [['Alt Text', 'Source URL']];
+    currentResult.images.forEach(img => {
+      rows.push([img.alt || '', img.src || '']);
+    });
+
+    const csvContent = rows
+      .map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `images-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Images exported',
+      description: `Exported ${currentResult.images.length} image URLs.`,
+    });
+  };
+
   return (
     <div className="flex h-screen bg-background">
       {/* History Sidebar */}
@@ -152,6 +188,10 @@ const Index = () => {
                   <DropdownMenuItem onClick={handleExportToSheets}>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Export to Google Sheets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportImages}>
+                    <Image className="h-4 w-4 mr-2" />
+                    Export Images
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
