@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, ScrapeJob, ScrapeResponse } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, ScrapeJob, ScrapeResponse } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 const SCRAPE_API_URL = 'https://womcxbappudoglbtmnzu.supabase.co/functions/v1/scrape';
@@ -13,6 +13,11 @@ export function useScraper() {
 
   // Fetch history from Supabase
   const fetchHistory = useCallback(async () => {
+    if (!supabase || !isSupabaseConfigured) {
+      console.log('Supabase not configured - history disabled');
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('scrape_jobs')
@@ -75,6 +80,15 @@ export function useScraper() {
 
   // Load a historical result
   const loadResult = async (job: ScrapeJob) => {
+    if (!supabase) {
+      toast({
+        title: 'Not available',
+        description: 'History feature requires Supabase configuration.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setSelectedJobId(job.id);
     
     try {
@@ -114,6 +128,8 @@ export function useScraper() {
 
   // Delete a job from history
   const deleteJob = async (id: string) => {
+    if (!supabase) return;
+    
     try {
       // Delete results first due to foreign key
       await supabase.from('scrape_results').delete().eq('job_id', id);
