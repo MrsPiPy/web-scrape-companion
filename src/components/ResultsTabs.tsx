@@ -42,23 +42,7 @@ export function ResultsTabs({ results }: ResultsTabsProps) {
             </TabsTrigger>
           ))}
         </TabsList>
-        <ExportButtons results={results} />
       </div>
-        {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.id}
-            value={tab.id}
-            className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 rounded-md"
-          >
-            <tab.icon className="h-4 w-4" />
-            <span>{tab.label}</span>
-            {tab.count > 0 && (
-              <span className="text-xs bg-background/20 px-1.5 py-0.5 rounded-full">
-                {tab.count}
-              </span>
-            )}
-          </TabsTrigger>
-        ))}
 
       <ScrollArea className="h-[calc(100vh-340px)]">
         <TabsContent value="summary" className="m-0">
