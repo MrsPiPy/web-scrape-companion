@@ -6,6 +6,7 @@ import { LinksTab } from './results/LinksTab';
 import { ImagesTab } from './results/ImagesTab';
 import { HeadersTab } from './results/HeadersTab';
 import { ResourcesTab } from './results/ResourcesTab';
+import { ExportButtons } from './ExportButtons';
 import { ScrapeResponse } from '@/lib/supabase';
 
 interface ResultsTabsProps {
@@ -23,7 +24,26 @@ export function ResultsTabs({ results }: ResultsTabsProps) {
 
   return (
     <Tabs defaultValue="summary" className="w-full animate-fade-in">
-      <TabsList className="w-full justify-start bg-secondary/50 border border-border rounded-lg p-1 h-auto flex-wrap gap-1">
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+        <TabsList className="justify-start bg-secondary/50 border border-border rounded-lg p-1 h-auto flex-wrap gap-1">
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 rounded-md"
+            >
+              <tab.icon className="h-4 w-4" />
+              <span>{tab.label}</span>
+              {tab.count > 0 && (
+                <span className="text-xs bg-background/20 px-1.5 py-0.5 rounded-full">
+                  {tab.count}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <ExportButtons results={results} />
+      </div>
         {tabs.map((tab) => (
           <TabsTrigger
             key={tab.id}
@@ -39,9 +59,8 @@ export function ResultsTabs({ results }: ResultsTabsProps) {
             )}
           </TabsTrigger>
         ))}
-      </TabsList>
 
-      <ScrollArea className="mt-6 h-[calc(100vh-320px)]">
+      <ScrollArea className="h-[calc(100vh-340px)]">
         <TabsContent value="summary" className="m-0">
           <SummaryTab summary={results.summary} />
         </TabsContent>
