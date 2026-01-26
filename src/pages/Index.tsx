@@ -15,7 +15,6 @@ const Index = () => {
     scrape,
     loadResult,
     deleteJob,
-    loadDemo,
   } = useScraper();
 
   return (
@@ -43,7 +42,7 @@ const Index = () => {
               </div>
             </div>
             
-            <UrlInput onScrape={scrape} onLoadDemo={loadDemo} isLoading={isLoading} />
+            <UrlInput onScrape={scrape} isLoading={isLoading} />
           </div>
         </header>
 

@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { Search, Globe, Loader2, FlaskConical } from 'lucide-react';
+import { Search, Globe, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface UrlInputProps {
   onScrape: (url: string) => void;
-  onLoadDemo: () => void;
   isLoading: boolean;
 }
 
-export function UrlInput({ onScrape, onLoadDemo, isLoading }: UrlInputProps) {
+export function UrlInput({ onScrape, isLoading }: UrlInputProps) {
   const [url, setUrl] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,17 +50,6 @@ export function UrlInput({ onScrape, onLoadDemo, isLoading }: UrlInputProps) {
               Scrape
             </>
           )}
-        </Button>
-        <Button
-          type="button"
-          size="lg"
-          variant="outline"
-          onClick={onLoadDemo}
-          disabled={isLoading}
-          className="h-12 px-4 font-medium"
-        >
-          <FlaskConical className="h-4 w-4" />
-          Demo
         </Button>
       </div>
     </form>
