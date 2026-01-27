@@ -44,7 +44,7 @@ export function useScraper() {
         throw new Error('Supabase is not configured');
       }
 
-      const { data, error } = await supabase.functions.invoke('scrape', {
+      const { data, error } = await supabase.functions.invoke('quick-handler', {
         body: { url },
       });
 
@@ -52,7 +52,7 @@ export function useScraper() {
         throw new Error(error.message || 'Failed to scrape URL');
       }
 
-      if (!data.success) {
+      if (data.error) {
         throw new Error(data.error || 'Failed to scrape URL');
       }
 
