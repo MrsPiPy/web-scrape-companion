@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured, ScrapeJob, ScrapeResponse } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
-const SCRAPE_API_URL = 'https://womcxbappudoglbtmnzu.supabase.co/functions/v1/scrape';
-
 export function useScraper() {
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<ScrapeJob[]>([]);
@@ -42,21 +40,31 @@ export function useScraper() {
     setSelectedJobId(null);
 
     try {
-      const response = await fetch(SCRAPE_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Request failed with status ${response.status}`);
+      if (!supabase) {
+        throw new Error('Supabase is not configured');
       }
 
-      const data: ScrapeResponse = await response.json();
-      setCurrentResult(data);
+      const { data, error } = await supabase.functions.invoke('scrape', {
+        body: { url },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to scrape URL');
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to scrape URL');
+      }
+
+      const result: ScrapeResponse = {
+        job_id: data.job_id,
+        summary: data.summary,
+        links: data.links,
+        images: data.images,
+        headers: data.headers,
+        resources: data.resources,
+      };
+      setCurrentResult(result);
       setSelectedJobId(data.job_id);
       
       toast({
