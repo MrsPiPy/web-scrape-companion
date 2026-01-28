@@ -44,7 +44,7 @@ export function useScraper() {
         throw new Error('Supabase is not configured');
       }
 
-      const { data, error } = await supabase.functions.invoke('quick-handler', {
+      const { data, error } = await supabase.functions.invoke('scrape', {
         body: { url },
       });
 
@@ -63,13 +63,17 @@ export function useScraper() {
         images: data.images,
         headers: data.headers,
         resources: data.resources,
+        remaining: data.remaining,
       };
       setCurrentResult(result);
       setSelectedJobId(data.job_id);
-      
+
+      const remainingMsg = data.remaining !== undefined
+        ? ` (${data.remaining} scrapes remaining today)`
+        : '';
       toast({
         title: 'Scrape complete',
-        description: 'Successfully extracted content from the page.',
+        description: `Successfully extracted content from the page.${remainingMsg}`,
       });
 
       // Refresh history

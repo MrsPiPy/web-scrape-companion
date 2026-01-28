@@ -3,8 +3,10 @@ import { HistorySidebar } from '@/components/HistorySidebar';
 import { ResultsTabs } from '@/components/ResultsTabs';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
+import { AuthButton } from '@/components/AuthButton';
 import { useScraper } from '@/hooks/useScraper';
-import { Globe, Share2, Link, FileSpreadsheet, Image } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Globe, Share2, Link, FileSpreadsheet, Image, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -16,6 +18,7 @@ import {
 
 const Index = () => {
   const { toast } = useToast();
+  const { isAuthenticated, signInWithGoogle } = useAuth();
   const {
     isLoading,
     history,
@@ -173,31 +176,46 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground">Extract content, links, and structure from any webpage</p>
                 </div>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleCopyLink}>
-                    <Link className="h-4 w-4 mr-2" />
-                    Copy link
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportToSheets}>
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    Export to Google Sheets
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportImages}>
-                    <Image className="h-4 w-4 mr-2" />
-                    Export Images
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleCopyLink}>
+                      <Link className="h-4 w-4 mr-2" />
+                      Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportToSheets}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      Export to Google Sheets
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportImages}>
+                      <Image className="h-4 w-4 mr-2" />
+                      Export Images
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <AuthButton />
+              </div>
             </div>
             
-            <UrlInput onScrape={scrape} isLoading={isLoading} />
+            {isAuthenticated ? (
+              <UrlInput onScrape={scrape} isLoading={isLoading} />
+            ) : (
+              <div className="flex items-center justify-center p-4 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/50">
+                <div className="text-center">
+                  <p className="text-muted-foreground mb-2">Sign in to start scraping</p>
+                  <Button onClick={signInWithGoogle} size="sm">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign in with Google
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

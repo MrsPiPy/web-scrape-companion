@@ -3,6 +3,11 @@ import { Search, Globe, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface UrlInputProps {
   onScrape: (url: string) => void;
@@ -52,8 +57,17 @@ const socialPlatforms = [
   },
 ];
 
+interface TrendingHashtag {
+  tag: string;
+  count: number;
+}
+
 export function UrlInput({ onScrape, isLoading }: UrlInputProps) {
   const [url, setUrl] = useState('');
+  const [trendsOpen, setTrendsOpen] = useState(false);
+  const [trendsLoading, setTrendsLoading] = useState(false);
+  const [trendingHashtags, setTrendingHashtags] = useState<TrendingHashtag[]>([]);
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,9 +76,46 @@ export function UrlInput({ onScrape, isLoading }: UrlInputProps) {
     }
   };
 
-  const handleSocialClick = (socialUrl: string) => {
-    setUrl(socialUrl);
-    onScrape(socialUrl);
+  const handleTikTokClick = async () => {
+    setTrendsOpen(true);
+    setTrendsLoading(true);
+
+    try {
+      if (!supabase) throw new Error('Not connected');
+
+      const { data, error } = await supabase.functions.invoke('tiktok-trends');
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setTrendingHashtags(data.hashtags || []);
+      toast({
+        title: 'TikTok Trends Loaded',
+        description: `Found ${data.hashtags?.length || 0} trending hashtags from ${data.videoCount} videos`,
+      });
+    } catch (error) {
+      console.error('Error fetching trends:', error);
+      toast({
+        title: 'Failed to load trends',
+        description: error instanceof Error ? error.message : 'Could not fetch TikTok trends',
+        variant: 'destructive',
+      });
+      setTrendsOpen(false);
+    } finally {
+      setTrendsLoading(false);
+    }
+  };
+
+  const handleSocialClick = (platform: string) => {
+    if (platform === 'TikTok') {
+      handleTikTokClick();
+    } else {
+      toast({
+        title: 'Not available',
+        description: `${platform} cannot be scraped due to security restrictions.`,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -115,20 +166,64 @@ export function UrlInput({ onScrape, isLoading }: UrlInputProps) {
                     variant="outline"
                     size="icon"
                     className={`h-8 w-8 border-border/50 bg-card/50 transition-all ${platform.color}`}
-                    onClick={() => handleSocialClick(platform.url)}
+                    onClick={() => handleSocialClick(platform.name)}
                     disabled={isLoading}
                   >
                     {platform.icon}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  Scrape {platform.name}
+                  {platform.name === 'TikTok' ? 'TikTok Trends' : `${platform.name} (unavailable)`}
                 </TooltipContent>
               </Tooltip>
             ))}
           </div>
         </TooltipProvider>
       </div>
+
+      <Dialog open={trendsOpen} onOpenChange={setTrendsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="h-5 w-5 text-pink-500" fill="currentColor">
+                <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+              </svg>
+              TikTok Trending Hashtags
+            </DialogTitle>
+          </DialogHeader>
+
+          {trendsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
+              <span className="ml-3 text-muted-foreground">Fetching trends...</span>
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[400px] pr-4">
+              <div className="flex flex-wrap gap-2">
+                {trendingHashtags.map((item, index) => (
+                  <Badge
+                    key={item.tag}
+                    variant="secondary"
+                    className="cursor-pointer hover:bg-pink-500/20 hover:text-pink-500 transition-colors"
+                    onClick={() => {
+                      window.open(`https://www.tiktok.com/tag/${item.tag}`, '_blank');
+                    }}
+                  >
+                    <span className="text-muted-foreground mr-1">#{index + 1}</span>
+                    #{item.tag}
+                    <span className="ml-1 text-xs text-muted-foreground">({item.count})</span>
+                  </Badge>
+                ))}
+              </div>
+              {trendingHashtags.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-4 text-center">
+                  Click a hashtag to view on TikTok
+                </p>
+              )}
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -35,4 +35,5 @@ export interface ScrapeResponse {
   images: { src: string; alt: string }[];
   headers: { level: number; text: string }[];
   resources: { type: string; url: string }[];
+  remaining?: number;
 }
