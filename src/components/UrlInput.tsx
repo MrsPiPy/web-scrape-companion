@@ -6,7 +6,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 interface UrlInputProps {
@@ -81,17 +80,63 @@ export function UrlInput({ onScrape, isLoading }: UrlInputProps) {
     setTrendsLoading(true);
 
     try {
-      if (!supabase) throw new Error('Not connected');
+      // Start Apify run
+      const startRes = await fetch(
+        'https://api.apify.com/v2/acts/emastra~tiktok-trending-scraper/runs?token=${import.meta.env.VITE_APIFY_API_KEY}',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ maxItems: 10 }),
+        }
+      );
+      if (!startRes.ok) throw new Error(`Apify error: ${startRes.status}`);
+      const runData = await startRes.json();
+      const runId = runData.data?.id;
+      const datasetId = runData.data?.defaultDatasetId;
+      if (!runId) throw new Error('No run ID');
 
-      const { data, error } = await supabase.functions.invoke('tiktok-trends');
+      // Poll for completion
+      let status = 'RUNNING';
+      let attempts = 0;
+      while (status === 'RUNNING' || status === 'READY') {
+        if (attempts++ > 60) throw new Error('Timed out');
+        await new Promise(r => setTimeout(r, 3000));
+        const statusRes = await fetch(
+          `https://api.apify.com/v2/actor-runs/${runId}?token=${import.meta.env.VITE_APIFY_API_KEY}`
+        );
+        const statusData = await statusRes.json();
+        status = statusData.data?.status || 'FAILED';
+      }
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (status !== 'SUCCEEDED') throw new Error(`Run failed: ${status}`);
 
-      setTrendingHashtags(data.hashtags || []);
+      // Fetch results
+      const itemsRes = await fetch(
+        `https://api.apify.com/v2/datasets/${datasetId}/items?token=${import.meta.env.VITE_APIFY_API_KEY}`
+      );
+      const videos = await itemsRes.json();
+
+      const hashtagCounts: Record<string, number> = {};
+      for (const video of videos) {
+        if (video.hashtags) {
+          for (const tag of video.hashtags) {
+            const cleanTag = (tag.name || tag || '').toString().replace('#', '');
+            if (cleanTag) {
+              hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+            }
+          }
+        }
+      }
+
+      const hashtags = Object.entries(hashtagCounts)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 50);
+
+      setTrendingHashtags(hashtags);
       toast({
         title: 'TikTok Trends Loaded',
-        description: `Found ${data.hashtags?.length || 0} trending hashtags from ${data.videoCount} videos`,
+        description: `Found ${hashtags.length} trending hashtags from ${videos.length} videos`,
       });
     } catch (error) {
       console.error('Error fetching trends:', error);
