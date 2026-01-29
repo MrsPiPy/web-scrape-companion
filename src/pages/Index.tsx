@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { UrlInput } from '@/components/UrlInput';
 import { HistorySidebar } from '@/components/HistorySidebar';
 import { ResultsTabs } from '@/components/ResultsTabs';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { AuthButton } from '@/components/AuthButton';
+import { SocialScrapeForm } from '@/components/SocialScrapeForm';
+import { SocialResultsView } from '@/components/SocialResultsView';
 import { useScraper } from '@/hooks/useScraper';
 import { useAuth } from '@/hooks/useAuth';
-import { Globe, Share2, Link, FileSpreadsheet, Image, LogIn } from 'lucide-react';
+import { useSocialScraper } from '@/hooks/useSocialScraper';
+import { Globe, Share2, Link, FileSpreadsheet, Image, LogIn, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -16,7 +20,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+type Mode = 'web' | 'social';
+
 const Index = () => {
+  const [mode, setMode] = useState<Mode>('web');
   const { toast } = useToast();
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const {
@@ -28,6 +35,11 @@ const Index = () => {
     loadResult,
     deleteJob,
   } = useScraper();
+  const {
+    isLoading: socialLoading,
+    results: socialResults,
+    scrape: socialScrape,
+  } = useSocialScraper();
 
   const handleCopyLink = async () => {
     try {
@@ -55,19 +67,16 @@ const Index = () => {
       return;
     }
 
-    // Build CSV content from scrape results
     const rows: string[][] = [];
-    
-    // Add links
+
     if (currentResult.links?.length) {
       rows.push(['Type', 'Text', 'URL']);
       currentResult.links.forEach(link => {
         rows.push(['Link', link.text || '', link.url || '']);
       });
-      rows.push([]); // Empty row separator
+      rows.push([]);
     }
 
-    // Add images
     if (currentResult.images?.length) {
       rows.push(['Type', 'Alt Text', 'Source URL']);
       currentResult.images.forEach(img => {
@@ -76,7 +85,6 @@ const Index = () => {
       rows.push([]);
     }
 
-    // Add headers
     if (currentResult.headers?.length) {
       rows.push(['Header Level', 'Text']);
       currentResult.headers.forEach(header => {
@@ -85,7 +93,6 @@ const Index = () => {
       rows.push([]);
     }
 
-    // Add resources
     if (currentResult.resources?.length) {
       rows.push(['Resource Type', 'URL']);
       currentResult.resources.forEach(resource => {
@@ -93,12 +100,10 @@ const Index = () => {
       });
     }
 
-    // Convert to CSV
     const csvContent = rows
       .map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
-    // Download CSV
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -125,7 +130,6 @@ const Index = () => {
       return;
     }
 
-    // Build CSV with image data
     const rows: string[][] = [['Alt Text', 'Source URL']];
     currentResult.images.forEach(img => {
       rows.push([img.alt || '', img.src || '']);
@@ -169,42 +173,74 @@ const Index = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <Globe className="h-6 w-6" />
+                  {mode === 'web' ? <Globe className="h-6 w-6" /> : <Hash className="h-6 w-6" />}
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gradient">Web Scraper</h1>
-                  <p className="text-sm text-muted-foreground">Extract content, links, and structure from any webpage</p>
+                  <h1 className="text-xl font-bold text-gradient">
+                    {mode === 'web' ? 'Web Scraper' : 'Social Media Scraper'}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    {mode === 'web'
+                      ? 'Extract content, links, and structure from any webpage'
+                      : 'Scrape hashtags and content from TikTok, YouTube Shorts, and Instagram'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleCopyLink}>
-                      <Link className="h-4 w-4 mr-2" />
-                      Copy link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportToSheets}>
-                      <FileSpreadsheet className="h-4 w-4 mr-2" />
-                      Export to Google Sheets
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportImages}>
-                      <Image className="h-4 w-4 mr-2" />
-                      Export Images
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex rounded-lg border border-border overflow-hidden">
+                  <Button
+                    variant={mode === 'web' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setMode('web')}
+                    className="rounded-none"
+                  >
+                    <Globe className="h-4 w-4 mr-1" />
+                    Web
+                  </Button>
+                  <Button
+                    variant={mode === 'social' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setMode('social')}
+                    className="rounded-none"
+                  >
+                    <Hash className="h-4 w-4 mr-1" />
+                    Social
+                  </Button>
+                </div>
+                {mode === 'web' && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleCopyLink}>
+                        <Link className="h-4 w-4 mr-2" />
+                        Copy link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportToSheets}>
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
+                        Export to Google Sheets
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportImages}>
+                        <Image className="h-4 w-4 mr-2" />
+                        Export Images
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 <AuthButton />
               </div>
             </div>
-            
+
             {isAuthenticated ? (
-              <UrlInput onScrape={scrape} isLoading={isLoading} />
+              mode === 'web' ? (
+                <UrlInput onScrape={scrape} isLoading={isLoading} />
+              ) : (
+                <SocialScrapeForm onScrape={socialScrape} isLoading={socialLoading} />
+              )
             ) : (
               <div className="flex items-center justify-center p-4 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/50">
                 <div className="text-center">
@@ -221,12 +257,22 @@ const Index = () => {
 
         {/* Results Area */}
         <main className="flex-1 overflow-hidden p-6">
-          {isLoading ? (
-            <LoadingState />
-          ) : currentResult ? (
-            <ResultsTabs results={currentResult} />
+          {mode === 'web' ? (
+            isLoading ? (
+              <LoadingState />
+            ) : currentResult ? (
+              <ResultsTabs results={currentResult} />
+            ) : (
+              <EmptyState />
+            )
           ) : (
-            <EmptyState />
+            socialLoading ? (
+              <LoadingState />
+            ) : socialResults ? (
+              <SocialResultsView data={socialResults} />
+            ) : (
+              <EmptyState />
+            )
           )}
         </main>
       </div>
