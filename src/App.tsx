@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Typography from "./pages/Typography";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const App = () => (
       <BrowserRouter basename="/web-scrape-companion">
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/typography" element={<Typography />} />
           <Route
             path="/"
             element={
