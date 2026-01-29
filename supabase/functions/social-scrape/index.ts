@@ -11,7 +11,7 @@ interface SocialScrapeRequest {
 
 const ACTOR_MAP = {
   tiktok: 'clockworks/tiktok-hashtag-scraper',
-  youtube: 'streamers/youtube-shorts-scraper',
+  youtube: 'scrapesmith/youtube-free-search-scraper',
   instagram: 'apify/instagram-hashtag-scraper',
 } as const;
 
@@ -59,7 +59,7 @@ function buildActorInput(platform: string, keywords: string[], maxResults: numbe
     case 'youtube':
       return {
         searchQueries: keywords,
-        maxResults,
+        videosPerSearch: maxResults,
       };
     case 'instagram':
       return {
@@ -95,15 +95,16 @@ function normalizeResults(platform: string, items: Record<string, unknown>[]) {
         return {
           platform: 'youtube',
           id: item.id || item.videoId,
-          url: item.url || (item.videoId ? `https://youtube.com/shorts/${item.videoId}` : ''),
-          title: item.title || item.caption,
+          url: item.url || item.link || (item.videoId ? `https://youtube.com/watch?v=${item.videoId}` : ''),
+          title: item.title,
+          description: item.description,
           author: item.channelName || item.channel,
           views: item.viewCount || item.views,
           likes: item.likeCount || item.likes,
-          comments: item.commentCount,
+          comments: item.commentCount || item.comments,
           thumbnail: item.thumbnailUrl || item.thumbnail,
-          publishedAt: item.uploadDate || item.publishedAt,
-          hashtags: item.hashtags,
+          publishedAt: item.publishDate || item.publishedAt || item.uploadDate,
+          duration: item.duration,
         };
       case 'instagram':
         return {
