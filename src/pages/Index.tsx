@@ -8,9 +8,8 @@ import { AuthButton } from '@/components/AuthButton';
 import { SocialScrapeForm } from '@/components/SocialScrapeForm';
 import { SocialResultsView } from '@/components/SocialResultsView';
 import { useScraper } from '@/hooks/useScraper';
-import { useAuth } from '@/hooks/useAuth';
 import { useSocialScraper } from '@/hooks/useSocialScraper';
-import { Globe, Share2, Link, FileSpreadsheet, Image, LogIn, Hash } from 'lucide-react';
+import { Globe, Share2, Link, FileSpreadsheet, Image, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -25,7 +24,7 @@ type Mode = 'web' | 'social';
 const Index = () => {
   const [mode, setMode] = useState<Mode>('web');
   const { toast } = useToast();
-  const { isAuthenticated, signInWithGoogle } = useAuth();
+  
   const {
     isLoading,
     history,
@@ -235,22 +234,10 @@ const Index = () => {
               </div>
             </div>
 
-            {isAuthenticated ? (
-              mode === 'web' ? (
-                <UrlInput onScrape={scrape} isLoading={isLoading} />
-              ) : (
-                <SocialScrapeForm onScrape={socialScrape} isLoading={socialLoading} />
-              )
+            {mode === 'web' ? (
+              <UrlInput onScrape={scrape} isLoading={isLoading} />
             ) : (
-              <div className="flex items-center justify-center p-4 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/50">
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-2">Sign in to start scraping</p>
-                  <Button onClick={signInWithGoogle} size="sm">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign in with Google
-                  </Button>
-                </div>
-              </div>
+              <SocialScrapeForm onScrape={socialScrape} isLoading={socialLoading} />
             )}
           </div>
         </header>
