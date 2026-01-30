@@ -94,17 +94,17 @@ function normalizeResults(platform: string, items: Record<string, unknown>[]) {
       case 'youtube':
         return {
           platform: 'youtube',
-          id: item.id || item.videoId,
-          url: item.url || item.link || (item.videoId ? `https://youtube.com/watch?v=${item.videoId}` : ''),
-          title: item.title,
-          description: item.description,
-          author: item.channelName || item.channel,
-          views: item.viewCount || item.views,
-          likes: item.likeCount || item.likes,
-          comments: item.commentCount || item.comments,
-          thumbnail: item.thumbnailUrl || item.thumbnail,
-          publishedAt: item.publishDate || item.publishedAt || item.uploadDate,
-          duration: item.duration,
+          id: item['01 ID'],
+          url: item['11 Video URL'],
+          title: item['02 Title'],
+          description: item['12 Description'],
+          author: item['09 Channel Name'],
+          views: item['03 Views'],
+          likes: item['04 Likes'],
+          comments: item['05 Comments'],
+          thumbnail: item['13 Thumbnail'],
+          publishedAt: item['07 Date Posted'],
+          duration: item['06 Duration'],
         };
       case 'instagram':
         return {
