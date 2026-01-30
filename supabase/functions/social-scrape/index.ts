@@ -59,7 +59,7 @@ function buildActorInput(platform: string, keywords: string[], maxResults: numbe
       };
     case 'youtube':
       return {
-        searchQueries: keywords,
+        searchQueries: [keywords.join(' ')],
         videosPerSearch: maxResults,
       };
     case 'instagram':
@@ -211,7 +211,20 @@ Deno.serve(async (req) => {
     const input = buildActorInput(resolvedPlatform, cleanedKeywords, maxResults);
     const { datasetId } = await callApifyActor(token, resolvedActorId, input);
     const items = await fetchDataset(token, datasetId, maxResults);
-    const results = normalizeResults(resolvedPlatform, items);
+    let results = normalizeResults(resolvedPlatform, items);
+
+    // For hashtag-based platforms with multiple keywords, post-filter to keep
+    // only results that match ALL keywords (narrower results).
+    if (cleanedKeywords.length > 1 && (resolvedPlatform === 'tiktok' || resolvedPlatform === 'instagram')) {
+      const lowerKeywords = cleanedKeywords.map((k) => k.toLowerCase());
+      results = results.filter((r: Record<string, unknown>) => {
+        const text = [r.description, r.caption, r.title].filter(Boolean).join(' ').toLowerCase();
+        const tags = Array.isArray(r.hashtags)
+          ? (r.hashtags as unknown[]).map((t) => (typeof t === 'object' ? ((t as Record<string, unknown>).name as string) : String(t)).toLowerCase())
+          : [];
+        return lowerKeywords.every((kw) => text.includes(kw) || tags.includes(kw));
+      });
+    }
 
     return new Response(
       JSON.stringify({
