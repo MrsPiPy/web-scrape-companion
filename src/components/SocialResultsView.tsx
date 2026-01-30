@@ -147,7 +147,7 @@ export function SocialResultsView({ data }: SocialResultsViewProps) {
         <div>
           <h3 className="text-lg font-semibold capitalize">{data.platform} Results</h3>
           <p className="text-sm text-muted-foreground">
-            {data.count} results for: {data.keywords.map((k) => `#${k}`).join(', ')}
+            {data.count} results for: {data.keywords.map((k) => k.startsWith('@') ? k : `#${k}`).join(', ')}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handleExportCSV}>

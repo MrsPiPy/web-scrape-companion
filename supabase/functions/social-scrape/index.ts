@@ -77,7 +77,7 @@ function buildActorInput(platform: string, keywords: string[], maxResults: numbe
 }
 
 function normalizeResults(platform: string, items: Record<string, unknown>[]) {
-  return items.map((item: Record<string, unknown>) => {
+  return items.flatMap((item: Record<string, unknown>) => {
     switch (platform) {
       case 'tiktok':
         return {
@@ -128,31 +128,32 @@ function normalizeResults(platform: string, items: Record<string, unknown>[]) {
         };
       case 'instagram_profile': {
         const posts = (item.latestPosts as Record<string, unknown>[]) || [];
-        return {
+        const profileCard = {
           platform: 'instagram',
-          type: 'profile',
-          id: item.id,
+          id: item.id || item.username,
           url: item.url || `https://www.instagram.com/${item.username}/`,
-          username: item.username,
-          fullName: item.fullName,
-          biography: item.biography,
-          profilePicUrl: item.profilePicUrl,
-          followersCount: item.followersCount,
-          followsCount: item.followsCount,
-          postsCount: item.postsCount,
-          verified: item.verified,
-          isBusinessAccount: item.isBusinessAccount,
-          latestPosts: posts.map((p: Record<string, unknown>) => ({
-            id: p.id,
-            url: p.url,
-            caption: p.caption,
-            likes: p.likesCount,
-            comments: p.commentsCount,
-            imageUrl: p.displayUrl,
-            type: p.type,
-            timestamp: p.timestamp,
-          })),
+          title: `${item.fullName || item.username}`,
+          description: item.biography,
+          author: item.username,
+          views: item.followersCount,
+          likes: item.postsCount,
+          comments: item.followsCount,
+          imageUrl: item.profilePicUrl,
         };
+        const postCards = posts.map((p: Record<string, unknown>) => ({
+          platform: 'instagram',
+          id: p.id,
+          url: p.url,
+          caption: p.caption,
+          author: item.username,
+          likes: p.likesCount,
+          comments: p.commentsCount,
+          views: p.videoViewCount || 0,
+          imageUrl: p.displayUrl,
+          type: p.type,
+          timestamp: p.timestamp,
+        }));
+        return [profileCard, ...postCards];
       }
       default:
         return { platform, ...item };
