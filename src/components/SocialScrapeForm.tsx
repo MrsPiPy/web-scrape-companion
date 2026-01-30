@@ -24,7 +24,9 @@ export function SocialScrapeForm({ onScrape, isLoading }: SocialScrapeFormProps)
   const [maxResults, setMaxResults] = useState(20);
 
   const addKeyword = () => {
-    const trimmed = keywordInput.trim().replace(/^#/, '');
+    const raw = keywordInput.trim();
+    const isUsername = raw.startsWith('@');
+    const trimmed = isUsername ? raw : raw.replace(/^#/, '');
     if (trimmed && !keywords.includes(trimmed)) {
       setKeywords([...keywords, trimmed]);
       setKeywordInput('');
@@ -68,7 +70,7 @@ export function SocialScrapeForm({ onScrape, isLoading }: SocialScrapeFormProps)
         <div className="relative flex-1">
           <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Type a keyword or hashtag and press Enter"
+            placeholder={platform === 'instagram' ? "Type a #hashtag or @username and press Enter" : "Type a keyword or hashtag and press Enter"}
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -113,7 +115,7 @@ export function SocialScrapeForm({ onScrape, isLoading }: SocialScrapeFormProps)
         <div className="flex flex-wrap gap-2">
           {keywords.map((kw) => (
             <Badge key={kw} variant="secondary" className="gap-1 px-3 py-1 text-sm">
-              #{kw}
+              {kw.startsWith('@') ? kw : `#${kw}`}
               <button
                 type="button"
                 onClick={() => removeKeyword(kw)}

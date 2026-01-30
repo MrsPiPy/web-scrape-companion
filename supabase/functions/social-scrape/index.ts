@@ -9,11 +9,12 @@ interface SocialScrapeRequest {
   maxResults?: number;
 }
 
-const ACTOR_MAP = {
+const ACTOR_MAP: Record<string, string> = {
   tiktok: 'clockworks/tiktok-hashtag-scraper',
   youtube: 'scrapesmith/youtube-free-search-scraper',
   instagram: 'apify/instagram-hashtag-scraper',
-} as const;
+  instagram_profile: 'apify/instagram-profile-scraper',
+};
 
 async function callApifyActor(
   token: string,
@@ -65,6 +66,10 @@ function buildActorInput(platform: string, keywords: string[], maxResults: numbe
       return {
         hashtags: keywords,
         resultsLimit: maxResults,
+      };
+    case 'instagram_profile':
+      return {
+        usernames: keywords,
       };
     default:
       throw new Error(`Unsupported platform: ${platform}`);
@@ -121,6 +126,34 @@ function normalizeResults(platform: string, items: Record<string, unknown>[]) {
           hashtags: item.hashtags,
           timestamp: item.timestamp,
         };
+      case 'instagram_profile': {
+        const posts = (item.latestPosts as Record<string, unknown>[]) || [];
+        return {
+          platform: 'instagram',
+          type: 'profile',
+          id: item.id,
+          url: item.url || `https://www.instagram.com/${item.username}/`,
+          username: item.username,
+          fullName: item.fullName,
+          biography: item.biography,
+          profilePicUrl: item.profilePicUrl,
+          followersCount: item.followersCount,
+          followsCount: item.followsCount,
+          postsCount: item.postsCount,
+          verified: item.verified,
+          isBusinessAccount: item.isBusinessAccount,
+          latestPosts: posts.map((p: Record<string, unknown>) => ({
+            id: p.id,
+            url: p.url,
+            caption: p.caption,
+            likes: p.likesCount,
+            comments: p.commentsCount,
+            imageUrl: p.displayUrl,
+            type: p.type,
+            timestamp: p.timestamp,
+          })),
+        };
+      }
       default:
         return { platform, ...item };
     }
@@ -159,12 +192,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Social scrape: ${platform} | keywords: ${keywords.join(', ')}`);
+    // For Instagram, detect @ prefixed inputs and route to profile scraper
+    let resolvedPlatform = platform;
+    let resolvedActorId = actorId;
+    const cleanedKeywords = keywords.map((k: string) => k.replace(/^[@#]/, ''));
 
-    const input = buildActorInput(platform, keywords, maxResults);
-    const { datasetId } = await callApifyActor(token, actorId, input);
+    if (platform === 'instagram') {
+      const hasUsernames = keywords.some((k: string) => k.startsWith('@'));
+      if (hasUsernames) {
+        resolvedPlatform = 'instagram_profile';
+        resolvedActorId = ACTOR_MAP.instagram_profile;
+      }
+    }
+
+    console.log(`Social scrape: ${resolvedPlatform} | keywords: ${cleanedKeywords.join(', ')}`);
+
+    const input = buildActorInput(resolvedPlatform, cleanedKeywords, maxResults);
+    const { datasetId } = await callApifyActor(token, resolvedActorId, input);
     const items = await fetchDataset(token, datasetId, maxResults);
-    const results = normalizeResults(platform, items);
+    const results = normalizeResults(resolvedPlatform, items);
 
     return new Response(
       JSON.stringify({
