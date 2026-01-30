@@ -1,10 +1,16 @@
-import { ExternalLink, Heart, Eye, MessageCircle, Share2, Download } from 'lucide-react';
+import { ExternalLink, Heart, Eye, MessageCircle, Share2, Download, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { SocialScrapeResponse, SocialResult } from '@/hooks/useSocialScraper';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface SocialResultsViewProps {
   data: SocialScrapeResponse;
@@ -141,6 +147,47 @@ export function SocialResultsView({ data }: SocialResultsViewProps) {
     toast({ title: 'CSV downloaded', description: `Exported ${data.results.length} results.` });
   };
 
+  const buildCsvContent = () => {
+    const rows: string[][] = [
+      ['Platform', 'URL', 'Author', 'Text', 'Views', 'Likes', 'Comments', 'Hashtags'],
+    ];
+    data.results.forEach((item) => {
+      rows.push([
+        item.platform,
+        String(item.url || ''),
+        String(item.author || ''),
+        getDisplayText(item).replace(/"/g, '""'),
+        String(item.views ?? ''),
+        String(item.likes ?? ''),
+        String(item.comments ?? ''),
+        Array.isArray(item.hashtags)
+          ? item.hashtags.map((t: unknown) => (typeof t === 'object' ? (t as { name?: string }).name : t)).join('; ')
+          : '',
+      ]);
+    });
+    return rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+  };
+
+  const handleShareGoogleSheets = () => {
+    const csv = buildCsvContent();
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `social-${data.platform}-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    window.open('https://sheets.google.com/create', '_blank');
+
+    toast({
+      title: 'Google Sheets',
+      description: 'CSV downloaded. In the new sheet, go to File > Import > Upload to import it.',
+    });
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -150,10 +197,24 @@ export function SocialResultsView({ data }: SocialResultsViewProps) {
             {data.count} results for: {data.keywords.map((k) => k.startsWith('@') ? k : `#${k}`).join(', ')}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleExportCSV}>
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Share2 className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Download CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShareGoogleSheets}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Google Sheets
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ScrollArea className="h-[calc(100vh-380px)]">
