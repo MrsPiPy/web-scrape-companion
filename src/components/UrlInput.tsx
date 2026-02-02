@@ -82,7 +82,7 @@ export function UrlInput({ onScrape, isLoading }: UrlInputProps) {
     try {
       // Start Apify run
       const startRes = await fetch(
-        'https://api.apify.com/v2/acts/emastra~tiktok-trending-scraper/runs?token=${import.meta.env.VITE_APIFY_API_KEY}',
+        `https://api.apify.com/v2/acts/emastra~tiktok-trending-scraper/runs?token=${import.meta.env.VITE_APIFY_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
